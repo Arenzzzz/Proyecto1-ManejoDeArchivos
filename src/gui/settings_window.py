@@ -6,7 +6,7 @@ idioma y tamaño_fuente. Los selectores de color y foto de perfil se
 agregan en un commit posterior.
 """
 
-from tkinter import colorchooser, messagebox
+from tkinter import colorchooser, filedialog, messagebox
 
 import customtkinter as ctk
 
@@ -83,6 +83,22 @@ class SettingsWindow(ctk.CTkToplevel):
             fila_letra, text="Elegir color...", command=self._elegir_color_letra
         ).pack(side="left")
 
+        # --- Foto de perfil (seleccionada desde el sistema de archivos) ---
+        self.foto_perfil = self.config_actual.get("foto_perfil", "")
+
+        ctk.CTkLabel(self, text="Foto de perfil").pack(anchor="w", **pad)
+        fila_foto = ctk.CTkFrame(self, fg_color="transparent")
+        fila_foto.pack(fill="x", padx=20)
+        self.label_ruta_foto = ctk.CTkLabel(
+            fila_foto,
+            text=self._nombre_corto(self.foto_perfil) or "(ninguna)",
+            anchor="w",
+        )
+        self.label_ruta_foto.pack(side="left", fill="x", expand=True)
+        ctk.CTkButton(
+            fila_foto, text="Elegir archivo...", command=self._elegir_foto
+        ).pack(side="left")
+
         botones = ctk.CTkFrame(self, fg_color="transparent")
         botones.pack(fill="x", padx=20, pady=20, side="bottom")
         ctk.CTkButton(botones, text="Guardar", command=self._guardar).pack(
@@ -109,6 +125,24 @@ class SettingsWindow(ctk.CTkToplevel):
             self.color_letra = hex_color
             self.preview_letra.configure(fg_color=hex_color)
 
+    @staticmethod
+    def _nombre_corto(ruta: str) -> str:
+        import os
+        return os.path.basename(ruta) if ruta else ""
+
+    def _elegir_foto(self):
+        # filedialog.askopenfilename abre el explorador de archivos nativo del SO
+        ruta = filedialog.askopenfilename(
+            title="Selecciona una foto de perfil",
+            filetypes=[
+                ("Imágenes", "*.png *.jpg *.jpeg *.gif *.bmp"),
+                ("Todos los archivos", "*.*"),
+            ],
+        )
+        if ruta:
+            self.foto_perfil = ruta
+            self.label_ruta_foto.configure(text=self._nombre_corto(ruta))
+
     def _guardar(self):
         try:
             tamano_fuente = int(self.entry_fuente.get())
@@ -124,6 +158,7 @@ class SettingsWindow(ctk.CTkToplevel):
         self.config_actual["tamaño_fuente"] = tamano_fuente
         self.config_actual["color_barra_menu"] = self.color_barra_menu
         self.config_actual["color_letra"] = self.color_letra
+        self.config_actual["foto_perfil"] = self.foto_perfil
 
         self.on_save(self.config_actual)
         self.destroy()
