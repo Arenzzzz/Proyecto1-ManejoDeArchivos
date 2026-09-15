@@ -11,9 +11,12 @@ from tkinter import messagebox
 
 import customtkinter as ctk
 
+from gui.settings_window import SettingsWindow
+import config_manager as cm
+
 
 class MainWindow(ctk.CTk):
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, aviso_carga: str | None = None):
         super().__init__()
 
         self.config_data = config
@@ -24,6 +27,10 @@ class MainWindow(ctk.CTk):
         self._build_menu()
         self._build_body()
         self.apply_config(config)
+
+        if aviso_carga:
+            # Se muestra después de construir la ventana para no bloquear el arranque
+            self.after(200, lambda: messagebox.showwarning("Aviso de carga", aviso_carga))
 
     # ------------------------------------------------------------------
     # Menú
@@ -85,8 +92,16 @@ class MainWindow(ctk.CTk):
         boton_settings.pack(pady=20)
 
     def open_settings(self):
-        # Se implementa en un commit posterior (settings_window.py)
-        pass
+        SettingsWindow(self, self.config_data, on_save=self._guardar_config)
+
+    def _guardar_config(self, nuevo_config: dict):
+        error = cm.save_config(nuevo_config)
+        if error:
+            messagebox.showerror("Error al guardar", error)
+            return  # config_data no se actualiza: el guardado falló
+
+        self.apply_config(nuevo_config)
+        messagebox.showinfo("Settings", "Configuración guardada correctamente.")
 
     # ------------------------------------------------------------------
     # Aplicar configuración a la interfaz
@@ -94,4 +109,12 @@ class MainWindow(ctk.CTk):
     def apply_config(self, config: dict):
         self.config_data = config
         nombre = config.get("nombre_usuario", "Usuario")
-        self.label_bienvenida.configure(text=f"Bienvenido, {nombre}")
+        self.label_bienvenida.configure(
+            text=f"Bienvenido, {nombre}",
+            text_color=config.get("color_letra", "#FFFFFF"),
+        )
+        self.label_info.configure(text_color=config.get("color_letra", "#FFFFFF"))
+
+        # customtkinter usa "dark"/"light"; el enunciado pide "claro"/"oscuro"
+        modo = "dark" if config.get("tema_interfaz") == "oscuro" else "light"
+        ctk.set_appearance_mode(modo)
