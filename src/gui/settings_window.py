@@ -6,7 +6,7 @@ idioma y tamaño_fuente. Los selectores de color y foto de perfil se
 agregan en un commit posterior.
 """
 
-from tkinter import messagebox
+from tkinter import colorchooser, messagebox
 
 import customtkinter as ctk
 
@@ -57,9 +57,31 @@ class SettingsWindow(ctk.CTkToplevel):
         self.entry_fuente.insert(0, str(self.config_actual.get("tamaño_fuente", 12)))
         self.entry_fuente.pack(fill="x", padx=20)
 
-        # Placeholder para los selectores de color y foto (commit siguiente)
-        self.frame_extra = ctk.CTkFrame(self, fg_color="transparent")
-        self.frame_extra.pack(fill="x", padx=20, pady=10)
+        # --- Selectores de color (usan el selector nativo del sistema) ---
+        self.color_barra_menu = self.config_actual.get("color_barra_menu", "#2B2B2B")
+        self.color_letra = self.config_actual.get("color_letra", "#FFFFFF")
+
+        ctk.CTkLabel(self, text="Color de la barra de menú").pack(anchor="w", **pad)
+        fila_barra = ctk.CTkFrame(self, fg_color="transparent")
+        fila_barra.pack(fill="x", padx=20)
+        self.preview_barra = ctk.CTkLabel(
+            fila_barra, text="", width=30, height=20, fg_color=self.color_barra_menu
+        )
+        self.preview_barra.pack(side="left", padx=(0, 10))
+        ctk.CTkButton(
+            fila_barra, text="Elegir color...", command=self._elegir_color_barra
+        ).pack(side="left")
+
+        ctk.CTkLabel(self, text="Color de letra").pack(anchor="w", **pad)
+        fila_letra = ctk.CTkFrame(self, fg_color="transparent")
+        fila_letra.pack(fill="x", padx=20)
+        self.preview_letra = ctk.CTkLabel(
+            fila_letra, text="", width=30, height=20, fg_color=self.color_letra
+        )
+        self.preview_letra.pack(side="left", padx=(0, 10))
+        ctk.CTkButton(
+            fila_letra, text="Elegir color...", command=self._elegir_color_letra
+        ).pack(side="left")
 
         botones = ctk.CTkFrame(self, fg_color="transparent")
         botones.pack(fill="x", padx=20, pady=20, side="bottom")
@@ -69,6 +91,23 @@ class SettingsWindow(ctk.CTkToplevel):
         ctk.CTkButton(
             botones, text="Cancelar", fg_color="gray", command=self.destroy
         ).pack(side="right")
+
+    def _elegir_color_barra(self):
+        # colorchooser.askcolor abre el selector de color nativo del SO
+        _, hex_color = colorchooser.askcolor(
+            color=self.color_barra_menu, title="Color de la barra de menú"
+        )
+        if hex_color:
+            self.color_barra_menu = hex_color
+            self.preview_barra.configure(fg_color=hex_color)
+
+    def _elegir_color_letra(self):
+        _, hex_color = colorchooser.askcolor(
+            color=self.color_letra, title="Color de letra"
+        )
+        if hex_color:
+            self.color_letra = hex_color
+            self.preview_letra.configure(fg_color=hex_color)
 
     def _guardar(self):
         try:
@@ -83,6 +122,8 @@ class SettingsWindow(ctk.CTkToplevel):
         self.config_actual["tema_interfaz"] = self.combo_tema.get()
         self.config_actual["idioma"] = self.combo_idioma.get()
         self.config_actual["tamaño_fuente"] = tamano_fuente
+        self.config_actual["color_barra_menu"] = self.color_barra_menu
+        self.config_actual["color_letra"] = self.color_letra
 
         self.on_save(self.config_actual)
         self.destroy()
