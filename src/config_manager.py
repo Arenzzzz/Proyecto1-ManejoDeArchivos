@@ -43,3 +43,32 @@ def load_config(path: str = CONFIG_PATH) -> dict:
     config = DEFAULT_CONFIG.copy()
     config.update(data)
     return config
+
+
+def save_config(config: dict, path: str = CONFIG_PATH) -> None:
+    """
+    Guarda `config` de forma segura:
+    1. Si ya existe un archivo de configuración, se respalda en .bak
+       ANTES de tocar el archivo final.
+    2. Se escribe el contenido nuevo en un archivo temporal (.tmp).
+    3. Se reemplaza el archivo final con el temporal usando os.replace,
+       que es atómico a nivel de sistema de archivos. Así, si la app se
+       cierra a la mitad del guardado, el archivo final nunca queda
+       corrupto o a medio escribir: o quedó el viejo completo, o el
+       nuevo completo.
+    """
+    tmp_path = path + ".tmp"
+    backup_path = path + ".bak"
+
+    # 1. Respaldo de la configuración anterior (si existe)
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as src, \
+             open(backup_path, "w", encoding="utf-8") as dst:
+            dst.write(src.read())
+
+    # 2. Escritura a archivo temporal
+    with open(tmp_path, "w", encoding="utf-8") as f:
+        json.dump(config, f, ensure_ascii=False, indent=4)
+
+    # 3. Reemplazo atómico del archivo final
+    os.replace(tmp_path, path)
