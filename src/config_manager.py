@@ -9,7 +9,10 @@ Formato elegido: JSON (ver justificación en README.md).
 """
 
 import json
+import logging
 import os
+
+logger = logging.getLogger("config_manager")
 
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config.json")
 BACKUP_PATH = CONFIG_PATH + ".bak"
@@ -27,25 +30,62 @@ DEFAULT_CONFIG = {
 }
 
 
-def load_config(path: str = CONFIG_PATH) -> dict:
+def load_config(path: str = CONFIG_PATH) -> tuple[dict, str | None]:
     """
     Carga la configuración desde `path`.
-    Si el archivo no existe, retorna una copia de los valores por defecto
-    sin lanzar excepción.
+
+    Maneja explícitamente los tres casos exigidos por el laboratorio,
+    degradando siempre a un comportamiento definido (nunca a un
+    traceback sin capturar):
+
+      - Archivo ausente        -> valores por defecto, sin aviso de error.
+      - Archivo corrupto/JSON inválido -> valores por defecto + aviso.
+      - Sin permisos de lectura -> valores por defecto + aviso.
+
+    Retorna una tupla (config, mensaje_de_aviso). `mensaje_de_aviso` es
+    None cuando la carga fue normal, o un texto para mostrar al usuario
+    en la GUI cuando hubo un problema y se usaron valores por defecto.
     """
+    # Caso 1: archivo ausente
     if not os.path.exists(path):
-        return DEFAULT_CONFIG.copy()
+        logger.info("Archivo de configuración no encontrado, usando valores por defecto.")
+        return DEFAULT_CONFIG.copy(), None
 
-    with open(path, "r", encoding="utf-8") as f:
-        data = json.load(f)
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
 
-    # Aseguramos que cualquier clave faltante se complete con el default
-    config = DEFAULT_CONFIG.copy()
-    config.update(data)
-    return config
+        config = DEFAULT_CONFIG.copy()
+        config.update(data)
+        return config, None
+
+    # Caso 2: archivo corrupto o formato inválido
+    except json.JSONDecodeError as e:
+        logger.error("Configuración corrupta (%s): %s", path, e)
+        return DEFAULT_CONFIG.copy(), (
+            "El archivo de configuración está dañado o tiene un formato "
+            "inválido. Se cargaron los valores por defecto."
+        )
+
+    # Caso 3: falta de permisos de lectura
+    except PermissionError as e:
+        logger.error("Sin permisos de lectura sobre %s: %s", path, e)
+        return DEFAULT_CONFIG.copy(), (
+            "No se tienen permisos para leer el archivo de configuración. "
+            "Se cargaron los valores por defecto."
+        )
+
+    # Cualquier otro error de E/S inesperado también se captura, nunca
+    # se deja propagar como traceback sin controlar.
+    except OSError as e:
+        logger.error("Error de E/S al leer %s: %s", path, e)
+        return DEFAULT_CONFIG.copy(), (
+            "Ocurrió un error inesperado al leer la configuración. "
+            "Se cargaron los valores por defecto."
+        )
 
 
-def save_config(config: dict, path: str = CONFIG_PATH) -> None:
+def save_config(config: dict, path: str = CONFIG_PATH) -> str | None:
     """
     Guarda `config` de forma segura:
     1. Si ya existe un archivo de configuración, se respalda en .bak
@@ -56,19 +96,39 @@ def save_config(config: dict, path: str = CONFIG_PATH) -> None:
        cierra a la mitad del guardado, el archivo final nunca queda
        corrupto o a medio escribir: o quedó el viejo completo, o el
        nuevo completo.
+
+    Retorna None si el guardado fue exitoso, o un mensaje de error para
+    mostrar al usuario si falló por falta de permisos u otro error de E/S
+    (caso 3 del laboratorio: falta de permisos de escritura).
     """
     tmp_path = path + ".tmp"
     backup_path = path + ".bak"
 
-    # 1. Respaldo de la configuración anterior (si existe)
-    if os.path.exists(path):
-        with open(path, "r", encoding="utf-8") as src, \
-             open(backup_path, "w", encoding="utf-8") as dst:
-            dst.write(src.read())
+    try:
+        # 1. Respaldo de la configuración anterior (si existe)
+        if os.path.exists(path):
+            with open(path, "r", encoding="utf-8") as src, \
+                 open(backup_path, "w", encoding="utf-8") as dst:
+                dst.write(src.read())
 
-    # 2. Escritura a archivo temporal
-    with open(tmp_path, "w", encoding="utf-8") as f:
-        json.dump(config, f, ensure_ascii=False, indent=4)
+        # 2. Escritura a archivo temporal
+        with open(tmp_path, "w", encoding="utf-8") as f:
+            json.dump(config, f, ensure_ascii=False, indent=4)
 
-    # 3. Reemplazo atómico del archivo final
-    os.replace(tmp_path, path)
+        # 3. Reemplazo atómico del archivo final
+        os.replace(tmp_path, path)
+        return None
+
+    except PermissionError as e:
+        logger.error("Sin permisos de escritura sobre %s: %s", path, e)
+        return (
+            "No se tienen permisos para escribir el archivo de "
+            "configuración. Los cambios no se guardaron."
+        )
+
+    except OSError as e:
+        logger.error("Error de E/S al guardar %s: %s", path, e)
+        return (
+            "Ocurrió un error inesperado al guardar la configuración. "
+            "Los cambios no se guardaron."
+        )
