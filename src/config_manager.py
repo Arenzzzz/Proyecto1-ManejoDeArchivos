@@ -25,7 +25,7 @@ DEFAULT_CONFIG = {
     "idioma": "es",
     "tamaño_fuente": 12,
     "color_barra_menu": "#2B2B2B",
-    "color_letra": "#FFFFFF",
+    "color_letra": "#1A1A1A",
     "foto_perfil": "",
 }
 

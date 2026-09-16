@@ -5,3 +5,4 @@ venv/
 *.bak
 config.json
 config.tmp
+.DS_Store
