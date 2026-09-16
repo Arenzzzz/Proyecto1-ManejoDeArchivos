@@ -59,8 +59,14 @@ class MainWindow(ctk.CTk):
             )
         menubar.add_cascade(label="Ver", menu=menu_ver)
 
-        # Settings: única opción funcional del menú
-        menubar.add_command(label="Settings", command=self.open_settings)
+        # Settings: única opción funcional del menú.
+        # Se usa add_cascade (en vez de add_command) porque en macOS los
+        # comandos puestos directo en la barra de menú no siempre se
+        # muestran de forma confiable; un cascade sí funciona en todas
+        # las plataformas.
+        menu_settings = tk.Menu(menubar, tearoff=0)
+        menu_settings.add_command(label="Abrir Settings", command=self.open_settings)
+        menubar.add_cascade(label="Settings", menu=menu_settings)
 
         self.configure(menu=menubar)
 
