@@ -143,11 +143,17 @@ class MainWindow(ctk.CTk):
     def apply_config(self, config: dict):
         self.config_data = config
         nombre = config.get("nombre_usuario", "Usuario")
+        tamano = config.get("tamaño_fuente", 12)
+
         self.label_bienvenida.configure(
             text=f"Bienvenido, {nombre}",
             text_color=config.get("color_letra", "#FFFFFF"),
+            font=ctk.CTkFont(size=tamano + 4, weight="bold"),
         )
-        self.label_info.configure(text_color=config.get("color_letra", "#FFFFFF"))
+        self.label_info.configure(
+            text_color=config.get("color_letra", "#FFFFFF"),
+            font=ctk.CTkFont(size=tamano),
+        )
 
         self._actualizar_foto_perfil(config.get("foto_perfil", ""))
 
