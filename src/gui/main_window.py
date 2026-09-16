@@ -88,9 +88,14 @@ class MainWindow(ctk.CTk):
         )
         self.label_bienvenida.pack(pady=(30, 10))
 
-        # Avatar circular con la foto de perfil (si hay una configurada)
-        self.label_foto = ctk.CTkLabel(self, text="", image=None)
-        self.label_foto.pack(pady=5)
+        # Avatar circular con la foto de perfil (si hay una configurada).
+        # Se usa un frame contenedor porque, en algunas versiones de
+        # CustomTkinter, hacer label.configure(image=None) no limpia de
+        # forma confiable una imagen previamente mostrada; en vez de eso,
+        # el label del avatar se destruye y se recrea cada vez.
+        self.frame_foto = ctk.CTkFrame(self, fg_color="transparent")
+        self.frame_foto.pack(pady=5)
+        self.label_foto = None
 
         self.label_info = ctk.CTkLabel(
             self,
@@ -151,20 +156,25 @@ class MainWindow(ctk.CTk):
         ctk.set_appearance_mode(modo)
 
     def _actualizar_foto_perfil(self, ruta: str):
+        # Se destruye el label anterior (si existía) para evitar el bug
+        # de CTkLabel que no limpia imágenes previas al reconfigurar.
+        if self.label_foto is not None:
+            self.label_foto.destroy()
+            self.label_foto = None
+
         # Si no hay foto configurada, o el archivo ya no existe / no se
-        # puede abrir como imagen (movido, borrado, corrupto), se oculta
-        # el avatar en vez de lanzar una excepción sin capturar.
+        # puede abrir como imagen (movido, borrado, corrupto), no se crea
+        # ningún label nuevo: el avatar simplemente no se muestra, sin
+        # lanzar una excepción sin capturar.
         if not ruta or not os.path.exists(ruta):
-            self.label_foto.configure(image=None, text="")
             return
 
         try:
             img = Image.open(ruta)
             img.thumbnail((96, 96))
             foto_ctk = ctk.CTkImage(light_image=img, dark_image=img, size=img.size)
-            self.label_foto.configure(image=foto_ctk, text="")
+            self.label_foto = ctk.CTkLabel(self.frame_foto, text="", image=foto_ctk)
             self.label_foto.image = foto_ctk  # referencia para que no la recoja el GC
+            self.label_foto.pack()
         except Exception as e:
-            logger_msg = f"No se pudo cargar la foto de perfil ({ruta}): {e}"
-            print(logger_msg)  # no se detiene la app por una foto inválida
-            self.label_foto.configure(image=None, text="")
+            print(f"No se pudo cargar la foto de perfil ({ruta}): {e}")
