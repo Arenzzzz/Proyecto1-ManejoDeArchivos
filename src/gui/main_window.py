@@ -6,10 +6,12 @@ y Ver (simulados: muestran un mensaje, no tienen funcionalidad real) y
 Settings (funcional, abre la ventana de configuración real).
 """
 
+import os
 import tkinter as tk
 from tkinter import messagebox
 
 import customtkinter as ctk
+from PIL import Image
 
 from gui.settings_window import SettingsWindow
 import config_manager as cm
@@ -21,7 +23,7 @@ class MainWindow(ctk.CTk):
 
         self.config_data = config
 
-        self.title("Proyecto 1 - Manejo de Archivos")
+        self.title("Laboratorio 1 - Manejo de Archivos")
         self.geometry("700x450")
 
         self._build_menu()
@@ -84,7 +86,11 @@ class MainWindow(ctk.CTk):
         self.label_bienvenida = ctk.CTkLabel(
             self, text="", font=ctk.CTkFont(size=16, weight="bold")
         )
-        self.label_bienvenida.pack(pady=30)
+        self.label_bienvenida.pack(pady=(30, 10))
+
+        # Avatar circular con la foto de perfil (si hay una configurada)
+        self.label_foto = ctk.CTkLabel(self, text="", image=None)
+        self.label_foto.pack(pady=5)
 
         self.label_info = ctk.CTkLabel(
             self,
@@ -98,7 +104,12 @@ class MainWindow(ctk.CTk):
         boton_settings.pack(pady=20)
 
     def open_settings(self):
-        SettingsWindow(self, self.config_data, on_save=self._guardar_config)
+        SettingsWindow(
+            self,
+            self.config_data,
+            on_save=self._guardar_config,
+            on_reset=self._restablecer_config,
+        )
 
     def _guardar_config(self, nuevo_config: dict):
         error = cm.save_config(nuevo_config)
@@ -108,6 +119,18 @@ class MainWindow(ctk.CTk):
 
         self.apply_config(nuevo_config)
         messagebox.showinfo("Settings", "Configuración guardada correctamente.")
+
+    def _restablecer_config(self):
+        error = cm.reset_config()
+        if error:
+            messagebox.showerror("Error al restablecer", error)
+            return
+
+        config, _ = cm.load_config()  # archivo ya no existe -> valores por defecto
+        self.apply_config(config)
+        messagebox.showinfo(
+            "Settings", "Configuración restablecida a los valores por defecto."
+        )
 
     # ------------------------------------------------------------------
     # Aplicar configuración a la interfaz
@@ -121,6 +144,27 @@ class MainWindow(ctk.CTk):
         )
         self.label_info.configure(text_color=config.get("color_letra", "#FFFFFF"))
 
+        self._actualizar_foto_perfil(config.get("foto_perfil", ""))
+
         # customtkinter usa "dark"/"light"; el enunciado pide "claro"/"oscuro"
         modo = "dark" if config.get("tema_interfaz") == "oscuro" else "light"
         ctk.set_appearance_mode(modo)
+
+    def _actualizar_foto_perfil(self, ruta: str):
+        # Si no hay foto configurada, o el archivo ya no existe / no se
+        # puede abrir como imagen (movido, borrado, corrupto), se oculta
+        # el avatar en vez de lanzar una excepción sin capturar.
+        if not ruta or not os.path.exists(ruta):
+            self.label_foto.configure(image=None, text="")
+            return
+
+        try:
+            img = Image.open(ruta)
+            img.thumbnail((96, 96))
+            foto_ctk = ctk.CTkImage(light_image=img, dark_image=img, size=img.size)
+            self.label_foto.configure(image=foto_ctk, text="")
+            self.label_foto.image = foto_ctk  # referencia para que no la recoja el GC
+        except Exception as e:
+            logger_msg = f"No se pudo cargar la foto de perfil ({ruta}): {e}"
+            print(logger_msg)  # no se detiene la app por una foto inválida
+            self.label_foto.configure(image=None, text="")

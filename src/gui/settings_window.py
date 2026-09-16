@@ -11,7 +11,7 @@ import customtkinter as ctk
 
 
 class SettingsWindow(ctk.CTkToplevel):
-    def __init__(self, master, config: dict, on_save):
+    def __init__(self, master, config: dict, on_save, on_reset):
         """
         master: ventana principal (MainWindow)
         config: dict con la configuración actual
@@ -23,6 +23,7 @@ class SettingsWindow(ctk.CTkToplevel):
         self.resizable(False, False)
 
         self.on_save = on_save
+        self.on_reset = on_reset
         self.config_actual = config.copy()
 
         self._build_form()
@@ -105,13 +106,20 @@ class SettingsWindow(ctk.CTkToplevel):
         ).pack(side="left")
 
         botones = ctk.CTkFrame(self, fg_color="transparent")
-        botones.pack(fill="x", padx=20, pady=20, side="bottom")
+        botones.pack(fill="x", padx=20, pady=(0, 20), side="bottom")
         ctk.CTkButton(botones, text="Guardar", command=self._guardar).pack(
             side="right", padx=(10, 0)
         )
         ctk.CTkButton(
             botones, text="Cancelar", fg_color="gray", command=self.destroy
         ).pack(side="right")
+        ctk.CTkButton(
+            botones,
+            text="Restablecer",
+            fg_color="#8B2E2E",
+            hover_color="#6E2424",
+            command=self._restablecer,
+        ).pack(side="left")
 
     def _elegir_color_barra(self):
         # colorchooser.askcolor abre el selector de color nativo del SO
@@ -177,3 +185,13 @@ class SettingsWindow(ctk.CTkToplevel):
 
         self.on_save(self.config_actual)
         self.destroy()
+
+    def _restablecer(self):
+        confirmado = messagebox.askyesno(
+            "Restablecer configuración",
+            "Esto eliminará config.json y volverá a los valores por "
+            "defecto (se conserva config.json.bak). ¿Continuar?",
+        )
+        if confirmado:
+            self.on_reset()
+            self.destroy()

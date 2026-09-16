@@ -132,3 +132,26 @@ def save_config(config: dict, path: str = CONFIG_PATH) -> str | None:
             "Ocurrió un error inesperado al guardar la configuración. "
             "Los cambios no se guardaron."
         )
+
+def reset_config(path: str = CONFIG_PATH) -> str | None:
+    """
+    Restablece la configuración a los valores por defecto, eliminando el
+    archivo config.json actual (config.json.bak se conserva como
+    respaldo). En el siguiente load_config() se ejecutará el mismo camino
+    de "archivo ausente" que al primer arranque de la aplicación.
+
+    Retorna None si se eliminó correctamente (o si ya no existía), o un
+    mensaje de error si falló por falta de permisos.
+    """
+    if not os.path.exists(path):
+        return None
+
+    try:
+        os.remove(path)
+        return None
+    except PermissionError as e:
+        logger.error("Sin permisos para eliminar %s: %s", path, e)
+        return "No se tienen permisos para eliminar el archivo de configuración."
+    except OSError as e:
+        logger.error("Error de E/S al eliminar %s: %s", path, e)
+        return "Ocurrió un error inesperado al eliminar la configuración."
