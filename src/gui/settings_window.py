@@ -2,8 +2,7 @@
 settings_window.py
 
 Ventana de Settings: permite configurar nombre_usuario, tema_interfaz,
-idioma y tamaño_fuente. Los selectores de color y foto de perfil se
-agregan en un commit posterior.
+idioma, tamaño_fuente, colores (barra de menú y letra) y foto de perfil.
 """
 
 from tkinter import colorchooser, filedialog, messagebox
@@ -20,7 +19,7 @@ class SettingsWindow(ctk.CTkToplevel):
         """
         super().__init__(master)
         self.title("Settings")
-        self.geometry("420x480")
+        self.geometry("420x620")
         self.resizable(False, False)
 
         self.on_save = on_save
@@ -41,7 +40,9 @@ class SettingsWindow(ctk.CTkToplevel):
         self.entry_nombre.pack(fill="x", padx=20)
 
         ctk.CTkLabel(self, text="Tema de interfaz").pack(anchor="w", **pad)
-        self.combo_tema = ctk.CTkComboBox(self, values=["claro", "oscuro"])
+        self.combo_tema = ctk.CTkComboBox(
+            self, values=["claro", "oscuro"], command=self._on_cambio_tema
+        )
         self.combo_tema.set(self.config_actual.get("tema_interfaz", "claro"))
         self.combo_tema.pack(fill="x", padx=20)
 
@@ -60,6 +61,10 @@ class SettingsWindow(ctk.CTkToplevel):
         # --- Selectores de color (usan el selector nativo del sistema) ---
         self.color_barra_menu = self.config_actual.get("color_barra_menu", "#2B2B2B")
         self.color_letra = self.config_actual.get("color_letra", "#FFFFFF")
+        # Se marca True solo cuando el usuario elige el color de letra a mano
+        # con el selector nativo; así sabemos si es seguro auto-sugerir un
+        # color con contraste al cambiar de tema, sin pisar su elección.
+        self._letra_elegida_manualmente = False
 
         ctk.CTkLabel(self, text="Color de la barra de menú").pack(anchor="w", **pad)
         fila_barra = ctk.CTkFrame(self, fg_color="transparent")
@@ -123,7 +128,17 @@ class SettingsWindow(ctk.CTkToplevel):
         )
         if hex_color:
             self.color_letra = hex_color
+            self._letra_elegida_manualmente = True
             self.preview_letra.configure(fg_color=hex_color)
+
+    def _on_cambio_tema(self, nuevo_tema: str):
+        # Si el usuario no ha elegido un color de letra a mano, se sugiere
+        # automáticamente uno legible sobre el nuevo tema (blanco sobre
+        # oscuro, negro sobre claro). Si ya lo personalizó, se respeta.
+        if self._letra_elegida_manualmente:
+            return
+        self.color_letra = "#F5F5F5" if nuevo_tema == "oscuro" else "#1A1A1A"
+        self.preview_letra.configure(fg_color=self.color_letra)
 
     @staticmethod
     def _nombre_corto(ruta: str) -> str:

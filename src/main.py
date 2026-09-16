@@ -8,7 +8,7 @@ Ejecutar con: python src/main.py
 """
 
 import config_manager as cm
-from gui.main_window import MainWindow
+from gui.main_window import MainWindow  
 
 
 def main():
