@@ -1,4 +1,4 @@
-# Laboratorio No. 1 — Manejo e Implementación de Archivos
+# Proyecto No. 1 — Manejo e Implementación de Archivos
 
 Aplicación de escritorio en Python (CustomTkinter) para gestionar un archivo
 de configuración de usuario, con lectura, escritura segura, respaldo y
