@@ -23,7 +23,7 @@ class MainWindow(ctk.CTk):
 
         self.config_data = config
 
-        self.title("Laboratorio 1 - Manejo de Archivos")
+        self.title("Proyecto 1 - Manejo de Archivos")
         self.geometry("700x450")
 
         self._build_menu()
